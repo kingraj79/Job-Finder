@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_macros.html" import mark_buttons %}
+{% block title %}{{ district_name }} — Job Finder{% endblock %}
+{% block content %}
+  <h1>{{ district_name }}</h1>
+  <div class="meta">
+    {{ jobs|length }} postings from {{ companies|length }} finance and fintech employers with Lower Manhattan offices,
+    filtered to New York locations. Difficulty is a 1–5 estimate from job title seniority and the years of experience
+    the posting asks for — hover a badge to see why. The company list is best-effort: confirm a firm's office before relying on it.
+  </div>
+
+  <form method="post" action="/district/refresh" style="margin-bottom:16px">
+    <button class="primary" type="submit">Fetch latest postings</button>
+  </form>
+
+  <form method="get" action="/district" class="controls">
+    <select name="order" onchange="this.form.submit()">
+      <option value="easiest" {% if order == 'easiest' %}selected{% endif %}>Easiest first</option>
+      <option value="hardest" {% if order == 'hardest' %}selected{% endif %}>Hardest first</option>
+    </select>
+  </form>
+  <div class="controls">
+    <input type="text" id="search" placeholder="Search title...">
+    <select id="companyFilter">
+      <option value="">All companies</option>
+      {% for c in companies %}<option value="{{ c|lower }}">{{ c }}</option>{% endfor %}
+    </select>
+    <select id="levelFilter">
+      <option value="">All levels</option>
+      {% for n, label in labels.items() %}<option value="{{ n }}">{{ n }} — {{ label }}</option>{% endfor %}
+    </select>
+  </div>
+
+  {% if not jobs %}
+    <div class="empty">No postings yet. Click <strong>Fetch latest postings</strong>.</div>
+  {% else %}
+  <div style="overflow-x:auto">
+  <table id="jobsTable">
+    <thead><tr><th>Difficulty</th><th>Role</th><th>Company</th><th>Location</th><th>Posted</th><th>Mark as</th></tr></thead>
+    <tbody>
+    {% for j in jobs %}
+      <tr data-job-id="{{ j.id }}" data-status="{{ j.app_status }}" data-company="{{ j.company|lower }}" data-level="{{ j.difficulty }}" data-text="{{ j.title|lower }}">
+        <td><span class="badge d{{ j.difficulty }}" title="{{ j.difficulty_reason }}">{{ j.difficulty }} · {{ j.difficulty_label }}</span></td>
+        <td><a href="/job/{{ j.id }}">{{ j.title }}</a></td>
+        <td>{{ j.company }}</td>
+        <td>{{ j.location or '—' }}</td>
+        <td>{{ j.posted_str }}</td>
+        <td>{{ mark_buttons(j.app_status) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+
+<script>
+  const search = document.getElementById('search');
+  const companyFilter = document.getElementById('companyFilter');
+  const levelFilter = document.getElementById('levelFilter');
+  const rows = Array.from(document.querySelectorAll('#jobsTable tbody tr'));
+  function applyFilters() {
+    const q = search.value.toLowerCase(), c = companyFilter.value, l = levelFilter.value;
+    rows.forEach(r => {
+      r.style.display = ((!q || r.dataset.text.includes(q)) && (!c || r.dataset.company === c)
+        && (!l || r.dataset.level === l)) ? '' : 'none';
+    });
+  }
+  [search, companyFilter, levelFilter].forEach(el => el.addEventListener(el === search ? 'input' : 'change', applyFilters));
+</script>
+{% endblock %}

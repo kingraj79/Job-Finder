@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% from "_macros.html" import mark_buttons %}
+{% block title %}Dashboard — Job Finder{% endblock %}
+{% block content %}
+  <h1>Your jobs</h1>
+  <div class="meta">Fresh postings from company career sites, ranked for you. Nothing is ever submitted on your behalf.</div>
+
+  {% if needs_resume %}
+  <div class="card hero">
+    <h2 style="margin-top:0">Start here</h2>
+    <ol class="steps">
+      <li><strong>Upload your resume</strong> in the chat box below, so the app knows what to look for.</li>
+      <li><strong>Review the matches</strong> in the "To review" tab, newest first.</li>
+      <li><strong>Mark each job</strong> Applied, Saved or Did not apply &mdash; it moves to that tab.</li>
+    </ol>
+  </div>
+  {% endif %}
+
+  <div class="card" id="chat">
+    <div class="chat-log" id="chatLog"></div>
+    <form class="chat-form" id="chatForm">
+      <input type="file" id="resumeFile" accept=".pdf,.docx,.txt,.md" hidden>
+      <button type="button" id="uploadBtn">Upload resume</button>
+      <input type="text" id="chatInput" placeholder="Ask for jobs, e.g. entry level data jobs at banks in New York this week" autocomplete="off" maxlength="500">
+      <button class="primary" type="submit" id="sendBtn">Send</button>
+    </form>
+  </div>
+
+  <div class="tabs">
+    {% for key, label, _s in categories %}
+      <a class="tab {{ 'active' if tab == key else '' }}" href="{{ link(tab=key, company='') }}">{{ label }}<span class="n" id="tab-count-{{ key }}">{{ counts[key] }}</span></a>
+    {% endfor %}
+    <a class="tab {{ 'active' if tab == 'all' else '' }}" href="{{ link(tab='all', company='') }}">All<span class="n" id="tab-count-all">{{ counts['all'] }}</span></a>
+  </div>
+
+  <form class="filters" method="get" action="/">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search by job title or company">
+    <select name="company" onchange="this.form.submit()">
+      <option value="">All companies</option>
+      {% for c in companies %}<option value="{{ c }}" {{ 'selected' if c == company else '' }}>{{ c }}</option>{% endfor %}
+    </select>
+    <select name="level" onchange="this.form.submit()" title="Level">
+      <option value="">All levels</option>
+      <option value="intern" {{ 'selected' if level == 'intern' else '' }}>Internships ({{ level_counts['intern'] }})</option>
+      {% for n, label in level_labels.items() %}<option value="{{ n }}" {{ 'selected' if level == n|string else '' }}>{{ label }} ({{ level_counts[n|string] }})</option>{% endfor %}
+    </select>
+    <select name="role" onchange="this.form.submit()" title="Role type">
+      <option value="">All role types</option>
+      {% for r in role_labels %}{% if role_counts[r] or role == r %}<option value="{{ r }}" {{ 'selected' if role == r else '' }}>{{ r }} ({{ role_counts[r] }})</option>{% endif %}{% endfor %}
+    </select>
+    <select name="sort" onchange="this.form.submit()" title="Sort">
+      <option value="newest" {{ 'selected' if sort == 'newest' else '' }}>Sort: Newest first</option>
+      <option value="match" {{ 'selected' if sort == 'match' else '' }}>Sort: Best match</option>
+      <option value="easiest" {{ 'selected' if sort == 'easiest' else '' }}>Sort: Easiest first</option>
+      <option value="hardest" {{ 'selected' if sort == 'hardest' else '' }}>Sort: Hardest first</option>
+    </select>
+    <label style="margin:0; display:flex; gap:6px; align-items:center; color:var(--text); font-size:0.85rem">
+      <input type="checkbox" name="relevant" value="1" {{ 'checked' if relevant else '' }} onchange="this.form.submit()">
+      Only my kind of role
+    </label>
+    <button type="submit">Search</button>
+  </form>
+
+  <div class="summary">
+    {{ total }} job{{ '' if total == 1 else 's' }}{% if q or company or relevant or level or role %} matching your filters{% endif %}
+    {% if total > jobs|length %}&middot; showing {{ jobs|length }} on this page{% endif %}
+    &middot; <span title="Match % is the share of your resume skills and target titles found in the posting, plus a bonus when a target title is in the job title. It is keyword overlap, not understanding. Ask the chat box 'how does matching work?'">what does match % mean?</span>
+  </div>
+
+  {% if not jobs %}
+    <div class="empty">
+      {% if tab == "review" and counts["all"] and not (q or company or relevant or level or role) %}You've been through everything here. Check the other tabs, or click <strong>Refresh jobs</strong> for new postings.
+      {% elif q or company or relevant or level or role %}No jobs match those filters. <a href="{{ link(q='', company='', relevant='', level='', role='') }}">Clear filters</a>
+      {% else %}Nothing here yet. Upload your resume above, or click <strong>Refresh jobs</strong>.{% endif %}
+    </div>
+  {% else %}
+  <div class="job-list">
+    {% for j in jobs %}
+    <div class="job-card" data-job-id="{{ j.id }}" data-status="{{ j.app_status }}">
+      <div class="info">
+        <a class="title" href="/job/{{ j.id }}">{{ j.title }}</a>
+        <div class="sub">{{ j.company }}{% if j.location %} &middot; {{ j.location }}{% endif %} &middot; Posted {{ j.posted_str }} &middot; <a class="tag" style="text-decoration:none; color:inherit" href="{{ link(role=j.role) }}" title="Show only {{ j.role }} jobs">{{ j.role }}</a>{% if j.source in ('LinkedIn', 'Indeed', 'Manual') %} &middot; <span class="tag">added from {{ j.source }}</span>{% endif %}</div>
+      </div>
+      <div class="meta-row">
+        <span class="score" title="Match with your resume">{{ j.match_score }}% match</span>
+        <a class="badge d{{ j.difficulty }}" style="text-decoration:none" href="{{ link(level=j.difficulty|string) }}" title="{{ j.difficulty_reason }}. Click to show only {{ j.difficulty_label }} jobs">{{ j.difficulty_label }}</a>
+        <span class="badge status-badge {{ j.app_status }}">{{ status_labels[j.app_status] }}</span>
+      </div>
+      {{ mark_buttons(j.app_status) }}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if pages > 1 %}
+  <div class="pager">
+    {% if page > 1 %}<a href="{{ link(page=page-1) }}">&larr; Previous</a>{% endif %}
+    <span>Page {{ page }} of {{ pages }}</span>
+    {% if page < pages %}<a href="{{ link(page=page+1) }}">Next &rarr;</a>{% endif %}
+  </div>
+  {% endif %}
+  {% endif %}
+
+  <details class="card" style="padding:12px 16px">
+    <summary style="cursor:pointer; font-weight:600">More places to search</summary>
+    <div class="meta" style="margin:10px 0">
+      LinkedIn and Indeed don't allow automated scraping, so they open in a new tab. Found something good there?
+      <a href="/import">Add it to your tracker</a>. Companies below have no public job feed.
+    </div>
+    <div>
+      {% if linkedin_url %}<a class="tag" style="margin:3px; display:inline-block" href="{{ linkedin_url }}" target="_blank" rel="noopener noreferrer">LinkedIn search &rarr;</a>{% endif %}
+      {% if indeed_url %}<a class="tag" style="margin:3px; display:inline-block" href="{{ indeed_url }}" target="_blank" rel="noopener noreferrer">Indeed search &rarr;</a>{% endif %}
+      {% for name, url in career_sites %}<a class="tag" style="margin:3px; display:inline-block" href="{{ url }}" target="_blank" rel="noopener noreferrer">{{ name }} &rarr;</a>{% endfor %}
+    </div>
+  </details>
+
+<script>
+(function () {
+  const log = document.getElementById('chatLog');
+  const form = document.getElementById('chatForm');
+  const input = document.getElementById('chatInput');
+  const fileInput = document.getElementById('resumeFile');
+  const sendBtn = document.getElementById('sendBtn');
+  const LABELS = { new: 'new', drafted: 'drafted', approved: 'approved', saved: 'saved', applied: 'applied',
+                   interviewing: 'interviewing', offer: 'offer', rejected: 'rejected', not_applied: 'did not apply' };
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  function scrollDown() { log.scrollTop = log.scrollHeight; }
+  function bubble(role, text) { const b = el('div', 'bubble ' + role, text); log.appendChild(b); scrollDown(); return b; }
+
+  function markButtons(status) {
+    const g = el('span', 'mark-group');
+    [['applied', 'Applied'], ['saved', 'Saved'], ['not_applied', 'Did not apply']].forEach(([choice, label]) => {
+      const b = el('button', 'mark-btn ' + choice + (status === choice ? ' active' : ''), label);
+      b.type = 'button';
+      b.dataset.choice = choice;
+      g.appendChild(b);
+    });
+    return g;
+  }
+
+  function jobCard(j) {
+    const card = el('div', 'job-card');
+    card.dataset.jobId = j.id;
+    card.dataset.status = j.status;
+    card.dataset.keep = '1';
+    const info = el('div', 'info');
+    const a = el('a', null, j.title);
+    a.href = '/job/' + encodeURIComponent(j.id);
+    info.appendChild(a);
+    info.appendChild(el('div', 'sub', [j.company, j.location, 'Posted ' + j.posted, j.match + '% match'].filter(Boolean).join(' · ')));
+    card.appendChild(info);
+    const d = el('span', 'badge d' + j.difficulty, j.difficulty + ' · ' + j.difficulty_label);
+    card.appendChild(d);
+    card.appendChild(el('span', 'badge status-badge ' + j.status, LABELS[j.status] || j.status));
+    card.appendChild(markButtons(j.status));
+    return card;
+  }
+
+  async function send(url, body, pending) {
+    sendBtn.disabled = true;
+    const wait = bubble('assistant', pending);
+    try {
+      const r = await fetch(url, { method: 'POST', body });
+      if (!r.ok) throw new Error('bad response');
+      const d = await r.json();
+      wait.textContent = d.reply;
+      (d.jobs || []).forEach(j => log.appendChild(jobCard(j)));
+      if (d.total > (d.jobs || []).length) {
+        log.appendChild(el('div', 'bubble assistant', 'Open the "All" tab below to browse every tracked job.'));
+      }
+    } catch (err) {
+      wait.textContent = 'Something went wrong talking to the server. Is it still running?';
+    } finally {
+      sendBtn.disabled = false;
+      scrollDown();
+    }
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    bubble('user', text);
+    input.value = '';
+    const fd = new FormData();
+    fd.append('message', text);
+    send('/chat', fd, 'Searching...');
+  });
+
+  document.getElementById('uploadBtn').addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files[0];
+    if (!f) return;
+    bubble('user', 'Uploaded ' + f.name);
+    const fd = new FormData();
+    fd.append('resume', f);
+    fileInput.value = '';
+    send('/chat/resume', fd, 'Reading your resume and searching job boards. This can take 20-30 seconds...');
+  });
+
+  bubble('assistant', {{ chat_greeting|tojson }});
+})();
+</script>
+{% endblock %}

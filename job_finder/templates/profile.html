@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Profile — Job Finder{% endblock %}
+{% block content %}
+  <h1>Your profile</h1>
+  <div class="meta">Used to score how well each job matches you and to draft tailored applications. Nothing here is sent anywhere except (optionally) to Claude to help write drafts, if you've set ANTHROPIC_API_KEY.</div>
+
+  <form method="post" action="/resume" enctype="multipart/form-data" class="card">
+    <h2>Upload your resume</h2>
+    <div class="meta">PDF, DOCX, TXT or MD, up to 5 MB. We read your skills and job titles from it, fill in your profile, then search for matching jobs and list them newest first. The file itself isn't stored — only the extracted text.</div>
+    <input type="file" name="resume" accept=".pdf,.docx,.txt,.md" required>
+    <button class="primary" type="submit">Upload &amp; find jobs</button>
+  </form>
+
+  <form method="post" action="/profile" class="card">
+    <div class="row">
+      <div class="col">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" value="{{ profile.name }}">
+        <label for="email">Email</label>
+        <input type="text" id="email" name="email" value="{{ profile.email }}">
+        <label for="phone">Phone</label>
+        <input type="text" id="phone" name="phone" value="{{ profile.phone }}">
+        <label for="location">Location</label>
+        <input type="text" id="location" name="location" value="{{ profile.location }}">
+      </div>
+      <div class="col">
+        <label for="portfolio_url">Portfolio / website URL</label>
+        <input type="text" id="portfolio_url" name="portfolio_url" value="{{ profile.portfolio_url }}">
+        <label for="linkedin_url">LinkedIn URL</label>
+        <input type="text" id="linkedin_url" name="linkedin_url" value="{{ profile.linkedin_url }}">
+        <label for="target_titles">Target job titles (comma-separated)</label>
+        <input type="text" id="target_titles" name="target_titles" value="{{ profile.target_titles }}" placeholder="e.g. Backend Engineer, Platform Engineer">
+        <label for="skills">Skills / keywords (comma-separated)</label>
+        <input type="text" id="skills" name="skills" value="{{ profile.skills }}" placeholder="e.g. Python, AWS, Kubernetes, distributed systems">
+      </div>
+    </div>
+    <label for="resume_text">Resume / background summary</label>
+    <textarea id="resume_text" name="resume_text" rows="12" placeholder="Paste your resume text or a summary of your experience here.">{{ profile.resume_text }}</textarea>
+    <button class="primary" type="submit" style="margin-top:14px">Save profile</button>
+  </form>
+{% endblock %}

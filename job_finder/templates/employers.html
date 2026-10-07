@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Employers — Job Finder{% endblock %}
+{% block content %}
+  <h1>Employers</h1>
+  <div class="meta">Every big tech company and bank this app pulls from, with how many of its jobs your searches have found so far (not its total openings; searches follow your resume's job titles, so upload a resume or use Refresh jobs to widen them). Click a card to see that company's jobs.</div>
+
+  {% if chart %}
+  <h2>Most jobs found</h2>
+  <div class="bars">
+    {% for c in chart %}
+    <a class="bar-row" href="{{ c.href }}">
+      <span>{{ c.name }}</span>
+      <span class="bar-track"><span class="bar-fill" style="display:block; width: {{ (c.count / chart_max * 100)|round|int }}%; background: {{ c.color }}"></span></span>
+      <span>{{ c.count }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% for key, title, desc, cards in groups %}
+    <h2 style="margin-bottom:2px">{{ title }}</h2>
+    {% if desc %}<div class="meta" style="margin-bottom:10px">{{ desc }}</div>{% endif %}
+    <div class="emp-grid">
+      {% for c in cards %}
+      <a class="emp-card" href="{{ c.href }}">
+        <div class="emp-head">
+          <span class="avatar" style="background: {{ c.color }}">{{ c.name[0] }}</span>
+          <div><div style="font-weight:600">{{ c.name }}</div>
+            <div class="emp-sub">{% if c.count %}newest {{ c.newest }}{% else %}no jobs tracked yet{% endif %}</div></div>
+        </div>
+        <div><span class="emp-count">{{ c.count }}</span> <span class="emp-sub">jobs found{% if c.entry %} &middot; {{ c.entry }} entry-level{% endif %}</span></div>
+        {% if c.top %}<ul class="emp-top">{% for t in c.top %}<li>{{ t }}</li>{% endfor %}</ul>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+  <h2 style="margin-bottom:2px">Search on their own site</h2>
+  <div class="meta" style="margin-bottom:10px">These employers run custom career sites with no public job feed, so their jobs can't be listed here. Each card opens their site.</div>
+  <div class="emp-grid">
+    {% for c in no_feed %}
+    <a class="emp-card" href="{{ c.url }}" target="_blank" rel="noopener noreferrer">
+      <div class="emp-head">
+        <span class="avatar" style="background: {{ c.color }}">{{ c.name[0] }}</span>
+        <div><div style="font-weight:600">{{ c.name }}</div><div class="emp-sub">Opens their careers site &rarr;</div></div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+{% endblock %}

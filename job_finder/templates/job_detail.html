@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "_macros.html" import mark_buttons %}
+{% block title %}{{ job.title }} — Job Finder</div>
+{% endblock %}
+{% block content %}
+<div data-job-id="{{ job.id }}" data-status="{{ job.app_status }}">
+  <a href="/">&larr; back to dashboard</a>
+  <h1 style="margin-top:12px">{{ job.title }}</h1>
+  <div class="meta">
+    {{ job.company }} &middot; {{ job.location or 'Location not listed' }} &middot;
+    <span class="tag">{{ job.source }}</span> &middot;
+    <span class="badge status-badge {{ job.app_status }}">{{ status_labels[job.app_status] }}</span> &middot;
+    <span class="score">{{ job.match_score }}% match</span> &middot;
+    <span class="badge d{{ job.difficulty }}" title="{{ job.difficulty_reason }}">difficulty {{ job.difficulty }}/5</span>
+  </div>
+
+  <div class="card">
+    <div style="margin-bottom:12px">{{ mark_buttons(job.app_status) }}</div>
+    {% if job.url %}<a href="{{ job.url }}" target="_blank" rel="noopener noreferrer"><button class="primary" type="button">Open posting on employer's site &rarr;</button></a>{% else %}<span class="meta">No link was saved for this job.</span>{% endif %}
+    <p style="font-size:0.85rem; color:var(--muted); margin-top:10px;">
+      This tool never submits applications for you. Use the draft below as a starting point,
+      review and edit it, then apply directly on the employer's own site — and mark the status
+      below once you have.
+    </p>
+  </div>
+
+  {% if job.matched_keywords %}
+  <div class="card">
+    <h2>Matched keywords</h2>
+    <div>{% for k in job.matched_keywords.split(',') %}<span class="tag" style="margin:2px">{{ k }}</span>{% endfor %}</div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h2>Description</h2>
+    <div class="desc">{{ job.description or 'No description text was provided by the source.' }}</div>
+  </div>
+
+  <div class="card">
+    <h2>Draft application</h2>
+    <form method="post" action="/job/{{ job.id }}/draft">
+      <button type="submit">{{ 'Regenerate draft' if job.draft else 'Generate draft' }}</button>
+    </form>
+    <form method="post" action="/job/{{ job.id }}/draft" style="margin-top:12px">
+      <label for="draft">Cover letter draft (editable — save your edits)</label>
+      <textarea id="draft" name="draft_text" rows="14">{{ job.draft }}</textarea>
+      <input type="hidden" name="save_only" value="1">
+      <button type="submit" style="margin-top:8px">Save edits</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Application status</h2>
+    <form method="post" action="/job/{{ job.id }}/status">
+      <label for="status">Status</label>
+      <select id="status" name="status">
+        {% for s in statuses %}
+          <option value="{{ s }}" {% if s == job.app_status %}selected{% endif %}>{{ status_labels[s] }}</option>
+        {% endfor %}
+      </select>
+      <label for="notes">Notes</label>
+      <textarea id="notes" name="notes" rows="3">{{ job.notes }}</textarea>
+      <button class="primary" type="submit" style="margin-top:8px">Update status</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
