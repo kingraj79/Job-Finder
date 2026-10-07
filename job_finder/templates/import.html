@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Import — Job Finder{% endblock %}
+{% block content %}
+  <h1>Add jobs from LinkedIn or Indeed</h1>
+  <div class="meta">LinkedIn and Indeed don't allow automated scraping, so this app never pulls from them. You stay in control: bring in the jobs <em>you</em> find there.</div>
+
+  <div class="card">
+    <h2 style="margin-top:0">1. Add a job you found</h2>
+    <div class="meta">Open the posting on LinkedIn or Indeed, then copy its details here. Pasting the description gives a better match score and difficulty rating.</div>
+    <form method="post" action="/import/job">
+      <div class="row">
+        <div class="col">
+          <label for="title">Job title *</label><input type="text" id="title" name="title" required style="width:100%">
+          <label for="company">Company *</label><input type="text" id="company" name="company" required style="width:100%">
+        </div>
+        <div class="col">
+          <label for="url">Link to the posting</label><input type="text" id="url" name="url" placeholder="https://www.linkedin.com/jobs/view/..." style="width:100%">
+          <label for="location">Location</label><input type="text" id="location" name="location" style="width:100%">
+        </div>
+      </div>
+      <label for="description">Job description (optional, paste it)</label>
+      <textarea id="description" name="description" rows="5"></textarea>
+      <label for="status">Put it in</label>
+      <select id="status" name="status">
+        <option value="saved">Saved</option>
+        <option value="new">To review</option>
+        <option value="applied">Applied</option>
+        <option value="not_applied">Did not apply</option>
+      </select>
+      <button class="primary" type="submit" style="margin-left:8px">Add job</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">2. Bring in your LinkedIn saved or applied jobs</h2>
+    <div class="meta">
+      LinkedIn lets you download your own data: <strong>Settings &amp; Privacy &rarr; Data privacy &rarr; Get a copy of your data</strong>,
+      pick the jobs options, and download. Upload <code>Saved Jobs.csv</code> or <code>Job Applications.csv</code> below.
+      The file is read once and not stored.
+    </div>
+    <form method="post" action="/import/csv" enctype="multipart/form-data">
+      <input type="file" name="file" accept=".csv" required>
+      <select name="kind">
+        <option value="saved">These are saved jobs</option>
+        <option value="applied">These are jobs I applied to</option>
+      </select>
+      <button class="primary" type="submit">Import</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">3. Search them yourself</h2>
+    <div class="meta">Opens in a new tab, using your target titles and location from your profile.</div>
+    {% if linkedin_url or indeed_url %}
+      {% if linkedin_url %}<a href="{{ linkedin_url }}" target="_blank" rel="noopener noreferrer"><button type="button">Search LinkedIn</button></a>{% endif %}
+      {% if indeed_url %}<a href="{{ indeed_url }}" target="_blank" rel="noopener noreferrer"><button type="button">Search Indeed</button></a>{% endif %}
+    {% else %}
+      <a href="/profile">Upload your resume</a> first so the searches know what to look for.
+    {% endif %}
+  </div>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% macro mark_buttons(status) %}
+  <span class="mark-group">
+    <button type="button" class="mark-btn applied {{ 'active' if status == 'applied' else '' }}" data-choice="applied">Applied</button>
+    <button type="button" class="mark-btn saved {{ 'active' if status == 'saved' else '' }}" data-choice="saved">Saved</button>
+    <button type="button" class="mark-btn not_applied {{ 'active' if status == 'not_applied' else '' }}" data-choice="not_applied">Did not apply</button>
+  </span>
+{% endmacro %}
